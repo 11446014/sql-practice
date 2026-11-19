@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>個人記帳與消費分析系統 · SQL 查詢練習</title>
+<meta name="description" content="個人記帳與消費分析系統：ERD、樣本資料與可修改執行的 SQL 查詢練習。">
+<style>
+:root{--bg:#f3f9fe;--card:#fff;--ink:#1b2a3a;--muted:#5b6f82;--brand:#2f86c9;--brand2:#e3f1fc;--line:#d0e3f2;--warn:#b42318;--warnbg:#fdecea;--ok:#067647;--code:#0f2438}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.65}
+header{position:sticky;top:0;z-index:10;background:#bfe0f8;color:var(--ink);border-bottom:1px solid #a5d0f0;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;padding:10px 20px}
+header .logo{font-weight:700;font-size:1.05rem}
+header nav{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+header nav a{color:var(--ink);text-decoration:none;padding:4px 12px;border-radius:999px;font-size:.92rem}
+header nav a:hover{background:rgba(255,255,255,.65)}
+.status{font-size:.82rem;background:rgba(255,255,255,.7);padding:3px 10px;border-radius:999px}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+section{margin-bottom:40px}
+h1{font-size:1.8rem;margin:.2em 0}
+h2{font-size:1.35rem;border-left:5px solid var(--brand);padding-left:10px;margin:0 0 14px}
+h3{font-size:1.05rem;margin:18px 0 8px}
+.sub{color:var(--muted);margin:0 0 6px}
+.owner{font-size:.9rem;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.pill{display:inline-block;background:var(--brand2);color:var(--brand);border-radius:999px;padding:1px 10px;font-size:.8rem;margin-right:4px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tabs button,.qlist button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;font-size:.9rem;color:var(--ink)}
+.tabs button.on,.qlist button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.qlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.qlist button small{opacity:.75;margin-left:4px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;white-space:nowrap}
+th{background:var(--brand2);position:sticky;top:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.null{color:#999;font-style:italic}
+.scroll{overflow:auto;max-height:320px;border-radius:8px}
+textarea{width:100%;min-height:150px;font:14px/1.55 ui-monospace,Menlo,Consolas,monospace;background:var(--code);color:#dcecfb;border:0;border-radius:10px;padding:12px;resize:vertical}
+.btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:8px 18px;font:inherit;cursor:pointer;font-weight:600}
+.btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+.btn:hover{filter:brightness(1.08)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.err{background:var(--warnbg);color:var(--warn);border:1px solid #f4b4ad;border-radius:8px;padding:10px 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88rem;white-space:pre-wrap}
+.note{background:var(--brand2);border-radius:8px;padding:10px 12px;font-size:.92rem}
+.meta{font-size:.82rem;color:var(--muted);margin:6px 0}
+pre.sql{background:var(--code);color:#dcecfb;border-radius:10px;padding:10px 12px;overflow:auto;font-size:.85rem;margin:6px 0}
+.badge{font-size:.7rem;font-weight:700;border-radius:4px;padding:0 5px;margin-right:4px}
+.badge.pk{background:#fde68a;color:#7a4b00}.badge.fk{background:#bfdbfe;color:#14478a}
+.erd{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+.cmpitem{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fff}
+.diff{color:var(--ok);font-weight:600}
+.errtag{display:inline-block;background:var(--warnbg);color:var(--warn);border:1px solid #f4b4ad;border-radius:6px;padding:0 8px;font-size:.78rem;font-weight:700;margin-right:6px}
+.cmpitem.iserr{border-color:#f4b4ad;background:#fffafa}
+.note,.mine{white-space:pre-line}
+.mine{border-left:4px solid var(--brand);background:#f7fbff;padding:8px 12px;margin-top:10px;border-radius:0 8px 8px 0;font-size:.92rem}
+footer{text-align:center;color:var(--muted);font-size:.82rem;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">💙 記帳 SQL 練習</span>
+  <nav>
+    <a href="#case">案例背景</a><a href="#design">資料庫設計</a><a href="#query">查詢操作</a><a href="#compare">結果比較</a>
+  </nav>
+  <span class="status" id="status">SQLite 載入中…</span>
+</header>
+
+<main>
+  <section id="case">
+    <h1>個人記帳與消費分析系統</h1>
+    <p class="sub">Personal Expense Management &amp; Analysis System</p>
+    <h2>1. 案例背景</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">資料庫給誰使用？</h3>
+        <p>給覺得「手寫記帳很麻煩」的人，包含上班族、學生，以及任何有記帳需求的人。使用者每天會在現金、銀行、信用卡、行動支付等帳戶進行收入與支出，用資料庫記錄之後，就能用查詢快速整理與分析，不必再手動翻帳本計算。</p>
+        <h3>要解決什麼問題？</h3>
+        <ul>
+          <li><b>記帳麻煩</b>：把收支集中記錄在資料庫，需要時用 SQL 一次查出來。</li>
+          <li><b>不小心花太多</b>：設定每月各分類預算，隨時比對實際支出，馬上看出哪個分類超支。</li>
+          <li>錢花到哪裡去？哪個分類占比最高？</li>
+          <li>每月收入與支出差多少、有沒有存到錢？各帳戶目前餘額是多少？</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">設計重點</h3>
+        <ul>
+          <li><b>金額一律存正數</b>，收入或支出由「分類」的 <code>type</code> 決定，避免同一筆資料出現互相矛盾的欄位。</li>
+          <li>使用者、帳戶、分類、交易、預算拆成 5 張表，降低重複資料（正規化）。</li>
+          <li>分類表多一個 <code>category_group</code>（餐費／學業／交通／休閒／生活），早餐、午餐、晚餐、零食飲料都歸在「餐費」，方便統計「這個月餐費花多少」。</li>
+          <li>預算以「使用者＋分類＋月份」為單位，可與實際支出做比較。</li>
+          <li>本網站為<b>唯讀</b>：只能執行 <code>SELECT</code>，不會破壞資料。</li>
+        </ul>
+        <span class="pill">5 張資料表</span><span class="pill" id="rowCount"></span><span class="pill">SQLite（瀏覽器執行）</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="design">
+    <h2>2. 資料庫設計</h2>
+    <h3>ERD 關聯圖</h3>
+    <p class="meta"><span class="badge pk">PK</span>主鍵　<span class="badge fk">FK</span>外來鍵　箭頭由外來鍵指向被參照的主鍵（皆為 1 對多：「1」在箭頭端、「N」在外來鍵端）</p>
+    <div class="erd"><div id="erd"></div></div>
+
+    <h3>欄位說明與樣本資料</h3>
+    <div class="tabs" id="tableTabs"></div>
+    <div class="card">
+      <div id="tableDesc" class="note"></div>
+      <h3>欄位說明</h3>
+      <div class="scroll"><table id="fieldTable"></table></div>
+      <h3>樣本資料</h3>
+      <div class="scroll"><table id="sampleTable"></table></div>
+    </div>
+  </section>
+
+  <section id="query">
+    <h2>3. 查詢操作</h2>
+    <p class="sub">選一個問題 → 閱讀預期結果 → 修改 SQL → 按「執行」，觀察實際結果或錯誤訊息。</p>
+    <div class="qlist" id="qlist"></div>
+    <div class="card">
+      <h3 style="margin-top:0" id="qTitle"></h3>
+      <p id="qQuestion"></p>
+      <p class="meta" id="qConcept"></p>
+      <textarea id="editor" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="btn" id="runBtn">▶ 執行 (Ctrl+Enter)</button>
+        <button class="btn ghost" id="resetBtn">還原原始 SQL</button>
+      </div>
+      <div class="grid2">
+        <div>
+          <h3>預期結果</h3>
+          <div class="note" id="qExpect" style="margin-bottom:8px"></div>
+          <div id="expectOut"></div>
+        </div>
+        <div>
+          <h3>實際結果</h3>
+          <div id="actualOut"><p class="meta">尚未執行</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <h2>4. 結果比較</h2>
+    <p class="sub">同一個問題，修改 SQL 之後結果如何改變？為什麼？（目前題目：<b id="cmpTitle"></b>）</p>
+    <div id="variants"></div>
+    <div class="card">
+      <h3 style="margin-top:0">自己的比較：原始 SQL vs. 編輯區目前的 SQL</h3>
+      <div class="row"><button class="btn" id="customCmp">比較編輯區的 SQL 與原始 SQL</button></div>
+      <div id="customOut"></div>
+    </div>
+  </section>
+</main>
+<footer>此網站為課堂作業，所有資料皆為虛構樣本。SQL 引擎：sql.js（SQLite 編譯為 WebAssembly）。</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+<script>
+/* ===== 請改成自己的資料 ===== */
+
+/* ===== 資料表定義 ===== */
+const SCHEMA_SQL = `
+CREATE TABLE users(
+  user_id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  joined_date TEXT NOT NULL
+);
+CREATE TABLE accounts(
+  account_id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(user_id),
+  account_name TEXT NOT NULL,
+  account_type TEXT NOT NULL CHECK(account_type IN ('cash','bank','credit_card','e_wallet')),
+  initial_balance INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE categories(
+  category_id TEXT PRIMARY KEY,
+  category_name TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL CHECK(type IN ('income','expense')),
+  category_group TEXT NOT NULL
+);
+CREATE TABLE transactions(
+  txn_id INTEGER PRIMARY KEY,
+  account_id INTEGER NOT NULL REFERENCES accounts(account_id),
+  category_id TEXT NOT NULL REFERENCES categories(category_id),
+  txn_date TEXT NOT NULL,
+  amount INTEGER NOT NULL CHECK(amount > 0),
+  merchant TEXT,
+  note TEXT
+);
+CREATE TABLE budgets(
+  budget_id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(user_id),
+  category_id TEXT NOT NULL REFERENCES categories(category_id),
+  month TEXT NOT NULL,
+  budget_amount INTEGER NOT NULL,
+  UNIQUE(user_id, category_id, month)
+);`;
+
+/* 交易資料：[帳戶, 分類, 日期, 金額, 商家, 備註]，載入時依日期排序後自動編號 */
+const TX = [
+  // —— 使用者 1（陳小明）9 月 ——
+  [2,'B','2026-09-05',8000,'家人匯款','九月生活費'],
+  [1,'C','2026-09-08',55,'早餐店','蛋餅奶茶'],
+  [1,'D','2026-09-09',90,'學校餐廳','午餐'],
+  [3,'H','2026-09-12',30,'捷運','通勤'],
+  [1,'F','2026-09-14',35,'便利商店','零食'],
+  [1,'E','2026-09-16',110,'便當店','晚餐'],
+  [1,'G','2026-09-18',85,'文具店','筆記本'],
+  [3,'I','2026-09-20',280,'電影院','看電影'],
+  [1,'D','2026-09-22',95,'學校餐廳','午餐'],
+  [2,'A','2026-09-25',4000,'餐廳打工','九月打工'],
+  [2,'K','2026-09-28',599,'電信公司','手機月租'],
+  // —— 使用者 1 10 月 ——
+  [1,'C','2026-10-01',60,'早餐店','早餐'],
+  [1,'D','2026-10-02',95,'學校餐廳','午餐'],
+  [1,'F','2026-10-02',25,'便利商店','飲料'],
+  [3,'H','2026-10-03',30,'捷運','通勤'],
+  [1,'E','2026-10-04',120,'便當店','晚餐'],
+  [2,'B','2026-10-05',8000,'家人匯款','十月生活費'],
+  [1,'C','2026-10-06',55,'早餐店','早餐'],
+  [1,'D','2026-10-07',90,'學校餐廳','午餐'],
+  [1,'F','2026-10-08',45,null,'零食'],
+  [1,'E','2026-10-09',105,'便當店','晚餐'],
+  [3,'H','2026-10-10',30,'捷運','通勤'],
+  [1,'G','2026-10-11',120,'文具店','原子筆與便利貼'],
+  [1,'D','2026-10-12',85,'學校餐廳','午餐'],
+  [1,'C','2026-10-13',60,null,'早餐'],
+  [1,'E','2026-10-14',150,'麵店','晚餐'],
+  [3,'F','2026-10-15',65,'手搖飲料店','珍珠奶茶'],
+  [1,'D','2026-10-16',95,'學校餐廳','午餐'],
+  [3,'H','2026-10-17',60,'公車','通勤'],
+  [3,'I','2026-10-18',320,'電影院','看電影'],
+  [1,'E','2026-10-19',180,'火鍋店','與同學聚餐'],
+  [2,'A','2026-10-20',4500,'餐廳打工','十月打工'],
+  [1,'C','2026-10-21',55,'早餐店','早餐'],
+  [1,'D','2026-10-22',90,'學校餐廳','午餐'],
+  [1,'F','2026-10-23',38,null,null],
+  [1,'J','2026-10-24',159,'藥妝店','洗髮精'],
+  [1,'E','2026-10-25',115,'便當店','晚餐'],
+  [3,'F','2026-10-26',65,'手搖飲料店','紅茶拿鐵'],
+  [1,'D','2026-10-27',95,'學校餐廳','午餐'],
+  [2,'K','2026-10-28',599,'電信公司','手機月租'],
+  [1,'G','2026-10-29',250,'文具店','報告用紙與資料夾'],
+  [1,'E','2026-10-30',130,'麵店','晚餐'],
+  [3,'I','2026-10-31',150,'遊戲平台','遊戲點數'],
+  // —— 使用者 1 11 月（到 11/12）——
+  [1,'C','2026-11-01',55,'早餐店','早餐'],
+  [1,'D','2026-11-03',95,'學校餐廳','午餐'],
+  [1,'F','2026-11-03',30,'便利商店','飲料'],
+  [3,'H','2026-11-04',30,'捷運','通勤'],
+  [2,'B','2026-11-05',8000,'家人匯款','十一月生活費'],
+  [1,'E','2026-11-05',115,'便當店','晚餐'],
+  [1,'C','2026-11-06',60,'早餐店','早餐'],
+  [1,'D','2026-11-06',90,'學校餐廳','午餐'],
+  [3,'I','2026-11-07',350,'KTV','與同學唱歌'],
+  [1,'E','2026-11-07',200,'燒烤店','聚餐'],
+  [1,'F','2026-11-08',45,null,'零食'],
+  [1,'C','2026-11-09',55,'早餐店','早餐'],
+  [1,'D','2026-11-09',95,'學校餐廳','午餐'],
+  [3,'H','2026-11-09',60,'公車','通勤'],
+  [2,'A','2026-11-10',3600,'餐廳打工','十一月打工'],
+  [1,'G','2026-11-10',180,'文具店','計算機電池與筆記'],
+  [1,'E','2026-11-10',125,'便當店','晚餐'],
+  [3,'F','2026-11-11',70,'手搖飲料店','雙11 買一送一'],
+  [1,'J','2026-11-11',399,'藥妝店','衛生紙與洗衣精'],
+  [1,'C','2026-11-12',60,'早餐店','早餐'],
+  [1,'D','2026-11-12',100,'學校餐廳','午餐'],
+  // —— 使用者 2（林小華）——
+  [4,'B','2026-10-05',6000,'家人匯款','十月生活費'],
+  [4,'D','2026-10-08',120,'麵店','午餐'],
+  [4,'I','2026-10-15',400,'電影院','看電影'],
+  [4,'E','2026-10-20',180,'火鍋店','晚餐'],
+  [4,'B','2026-11-05',6000,'家人匯款','十一月生活費'],
+  [4,'D','2026-11-09',130,'學校餐廳','午餐'],
+  [4,'J','2026-11-10',260,'藥妝店','日用品']
+].sort((a,b)=> a[2]<b[2]?-1 : a[2]>b[2]?1 : 0);
+
+const DATA = {
+  users: [
+    [1,'陳小明','user1@example.com','2026-09-01'],
+    [2,'林小華','user2@example.com','2026-10-01']
+  ],
+  accounts: [
+    [1,1,'錢包現金','cash',5000],
+    [2,1,'銀行活存','bank',12000],
+    [3,1,'LINE Pay','e_wallet',2500],
+    [4,2,'銀行活存','bank',8000]
+  ],
+  categories: [
+    ['A','打工收入','income','收入'],['B','生活費','income','收入'],
+    ['C','早餐','expense','餐費'],['D','午餐','expense','餐費'],['E','晚餐','expense','餐費'],['F','零食飲料','expense','餐費'],
+    ['G','文具','expense','學業'],['H','交通','expense','交通'],['I','娛樂','expense','休閒'],
+    ['J','日用品','expense','生活'],['K','手機網路費','expense','生活']
+  ],
+  transactions: TX.map((r,i)=>[i+1,...r]),
+  budgets: [
+    [1,1,'D','2026-10',500],[2,1,'E','2026-10',1200],[3,1,'F','2026-10',300],[4,1,'I','2026-10',400],[5,1,'H','2026-10',200],
+    [6,1,'D','2026-11',600],[7,1,'E','2026-11',1000],[8,1,'F','2026-11',300],[9,1,'I','2026-11',300],
+    [10,2,'D','2026-10',500],[11,2,'E','2026-10',400]
+  ]
+};
+
+/* ===== 欄位說明（顯示用） ===== */
+const META = {
+  users:{ desc:'記帳系統的使用者。一位使用者可以擁有多個帳戶與多筆預算。', fields:[
+    ['user_id','INTEGER','PK','使用者編號'],['name','TEXT','','姓名'],['email','TEXT','UNIQUE','電子郵件，不可重複'],['joined_date','TEXT','','開始使用日期 (YYYY-MM-DD)']]},
+  accounts:{ desc:'資金存放的帳戶（現金、銀行、行動支付等）。每個帳戶屬於一位使用者。', fields:[
+    ['account_id','INTEGER','PK','帳戶編號'],['user_id','INTEGER','FK → users','帳戶擁有者'],['account_name','TEXT','','帳戶名稱'],
+    ['account_type','TEXT','CHECK','cash / bank / credit_card / e_wallet'],['initial_balance','INTEGER','','開始記帳時的期初餘額（元）']]},
+  categories:{ desc:'收支分類。type 決定是收入還是支出；category_group 把相近的分類歸成一組（例如早餐、午餐、晚餐、零食飲料都屬於「餐費」），方便統計。', fields:[
+    ['category_id','TEXT','PK','分類代號（A、B、C…）'],['category_name','TEXT','UNIQUE','分類名稱'],['type','TEXT','CHECK','income（收入）／expense（支出）'],
+    ['category_group','TEXT','','分類群組：收入／餐費／學業／交通／休閒／生活']]},
+  transactions:{ desc:'每一筆收支紀錄（事實表）。金額一律為正數，收入或支出由分類的 type 決定。', fields:[
+    ['txn_id','INTEGER','PK','交易編號'],['account_id','INTEGER','FK → accounts','從哪個帳戶收／付'],['category_id','TEXT','FK → categories','交易分類（分類代號）'],
+    ['txn_date','TEXT','','交易日期 (YYYY-MM-DD)'],['amount','INTEGER','CHECK > 0','金額（元，正數）'],['merchant','TEXT','','商家／對象'],['note','TEXT','','備註']]},
+  budgets:{ desc:'每月各分類的預算上限，用來和實際支出比較。', fields:[
+    ['budget_id','INTEGER','PK','預算編號'],['user_id','INTEGER','FK → users','預算所屬使用者'],['category_id','TEXT','FK → categories','預算分類（分類代號）'],
+    ['month','TEXT','','月份 (YYYY-MM)'],['budget_amount','INTEGER','','該月該分類預算（元）']]}
+};
+
+/* ===== 我的說明：請用自己的話填寫（第 N 個字串對應第 N 個修改版）===== */
+const MY_NOTES = {
+  q1: [
+    "我把 >= 改成 >，起點改成 11/05。列數從 24 列變成 17 列，少了 7 列。少掉的是 11/01 到 11/05 的交易，不只是 11/05 當天，因為起點整個往後移了。我的理解是：>= 包含邊界值、> 不包含，查日期範圍時要先決定起點和終點算不算在內。",
+    "我把 ORDER BY txn_date 改成 amount DESC。列數仍然是 24 列，內容也一樣，只有順序變成金額由大到小，最前面是 8000、6000、3600 這幾筆收入。我的理解是：WHERE 先決定選哪些列，ORDER BY 最後才排順序，所以排序不會改變選出的資料。",
+    "我故意把 amount 打成 amout。結果沒有資料，只出現 no such column: amout 的錯誤。我的理解是：SQL 執行前會先檢查欄位名稱，欄位不存在就直接報錯，遇到這種錯誤先檢查拼字。"
+  ],
+  q2: [
+    "我拿掉 c.type = 'expense'。列數從 30 列變成 32 列，多出 10/05 的生活費和 10/20 的打工收入。我的理解是：收入和支出都放在同一張交易表，要靠分類表的 type 才能區分，所以必須 JOIN categories。",
+    "我把 a.user_id 從 1 改成 2。結果只剩 3 列，是林小華 10 月的午餐、電影和晚餐。我的理解是：交易表沒有 user_id，要經過 accounts 表才知道是誰的帳戶，所以 JOIN accounts 才能依使用者篩選。",
+    "我拿掉 JOIN 的條件。列數從 30 列暴增到 396 列，而且分類跟商家對不起來。原因是每筆交易都和 11 個分類配對一次（10 月共 36 筆交易，36 × 11 = 396）。我的理解是：忘記寫 JOIN 條件不會報錯，但會得到錯誤的結果，列數異常多時要先檢查 JOIN。"
+  ],
+  q3: [
+    "我把 SUM 改成 AVG。列數一樣是 9 列，但排名改變了：原本晚餐總額最高，改成平均之後，手機網路費（599）第一、娛樂（300）第二，晚餐掉到第五。我的理解是：SUM 看總共花多少，AVG 看每次平均花多少，筆數多但單筆小的分類平均就低。",
+    "我拿掉 WHERE c.type = 'expense'。列數從 9 列變成 11 列，多了生活費和打工收入，而且這兩列金額最大，排在最前面。我的理解是：WHERE 在分組前先過濾，拿掉之後收入也會被分組。",
+    "我在 SELECT 加了沒有分組的 merchant。SQLite 沒有報錯，但每個分類只顯示一個商家，例如晚餐只顯示便當店，其實還有麵店、火鍋店。我的理解是：SELECT 的欄位要嘛在 GROUP BY 裡，要嘛放在聚合函數裡，SQLite 不報錯不代表結果正確。"
+  ],
+  q4: [
+    "我把 ELSE 0 改成 ELSE 1。每個月的數字都多了一點，例如 9 月的 income 從 12000 變成 12009、expense 從 1379 變成 1381。多出來的數字就是『不符合條件的筆數』（9 月有 9 筆支出、2 筆收入）。我的理解是：條件聚合的 ELSE 要放不影響加總的 0。",
+    "我把 GROUP BY 月份改成 c.type。結果從 3 列變成 2 列：支出 58 筆共 7129 元，收入 6 筆共 36100 元，月份不見了。我的理解是：GROUP BY 的欄位決定一列代表什麼，想看趨勢用月份，想看收支比例用 type。"
+  ],
+  q5: [
+    "我把門檻從 500 改成 1000。列數從 7 列變成 4 列，只剩晚餐、手機網路費、午餐、娛樂，文具、日用品、早餐被濾掉。我的理解是：HAVING 是對分組後的總額做篩選，門檻越高，通過的分類越少。",
+    "我把 HAVING 改成 WHERE。結果出現 misuse of aggregate: SUM() 的錯誤。我的理解是：SQL 先執行 WHERE 再 GROUP BY，WHERE 的時候還沒算出 SUM，所以對『分組後結果』的條件一定要用 HAVING。"
+  ],
+  q6: [
+    "我把月份改成 2026-11。列數從 5 列變成 4 列，因為 11 月沒有設定交通預算；11 月的娛樂預算 300 已經花了 350，超支 50。11 月只記到 11/12，所以其他分類看起來比較寬裕。我的理解是：比較不同月份時要留意天數是否相同。",
+    "我把 LEFT JOIN 改成 JOIN。這份資料的結果相同（5 列），因為 10 月每個有預算的分類都有消費。我的理解是：LEFT JOIN 會保留沒有消費的預算（spent 顯示 0），INNER JOIN 則會讓它消失，要看預算有沒有用完應該用 LEFT JOIN。",
+    "我加上 HAVING SUM(t.amount) > b.budget_amount。列數從 5 列變成 2 列，只剩午餐（超支 50）和娛樂（超支 70）。我的理解是：HAVING 可以在分組後把實際支出和預算做比較，直接找出超支的分類。"
+  ],
+  q7: [
+    "我把 AVG 改成 MAX。結果是 0 列，因為沒有任何一筆支出會比最大的支出還要大。我的理解是：0 列不是錯誤，只是沒有符合條件的資料，基準值換成 MAX 之後門檻就變得不可能達到。",
+    "我把 > 改成 <。列數從 16 列變成 47 列（16 + 47 = 63，剛好是全部的支出筆數）。因為少數大額支出把平均拉高，大部分日常小額消費都低於平均。我的理解是：平均值會被極端值影響。"
+  ],
+  q8: [
+    "我把收入和支出都直接加起來。每個帳戶的餘額都變大了，例如錢包現金從 609 變成 9391，LINE Pay 從 960 變成 4040，支出被當成收入。我的理解是：金額一律存正數，所以要用 CASE WHEN 依 type 決定加還是減。",
+    "我加上 WHERE u.user_id = 1。列數從 4 列變成 3 列，只剩陳小明自己的帳戶，而且每個帳戶的餘額都沒有變。我的理解是：WHERE 只是縮小範圍，餘額是分別用各帳戶自己的交易計算的。"
+  ],
+  q9: [
+    "我拿掉 GROUP BY，只留下 SUM。結果從 4 列變成 1 列 1 欄：1195，剛好等於 440 + 380 + 230 + 145。我的理解是：想看細項要 GROUP BY，只想知道本月餐費總共多少就直接 SUM。",
+    "我把月份改成 2026-10。列數還是 4 列，晚餐（800）、午餐（550）、零食飲料（238）都比 11 月多，早餐剛好一樣（4 筆 230）。我的理解是：10 月是完整一個月，11 月只記到 11/12，天數不同，所以比較時要小心。",
+    "我把 category_group = '餐費' 改成 c.type = 'expense'。列數從 4 列變成 8 列，多了日用品、娛樂、文具、交通。我的理解是：category_group 可以把相近的分類歸成一組，方便只統計餐費。",
+    "我只列出午餐和晚餐。列數變成 2 列，早餐和零食飲料都漏掉，餐費被低估。我的理解是：手動列出分類容易漏，用 category_group 比較安全，將來新增宵夜分類也不用改查詢。"
+  ],
+  q10: [
+    "我把 <> 改成 =。列數從 5 列變成 14 列，變成餐費的明細。5 + 14 = 19，剛好是陳小明 11 月全部的支出。我的理解是：<> 和 = 的條件剛好互補。",
+    "我改用 NOT IN 子查詢。結果和原本完全相同（5 列）。我的理解是：同一個問題可以有不同寫法，只要邏輯相同，結果就會相同。",
+    "我加上 GROUP BY category_group。從 5 列明細變成 4 列彙總（生活、休閒、學業、交通），只剩筆數和總額，看不到商家和日期。我的理解是：明細適合查哪一天花在哪，彙總適合看整體分布。",
+    "我把 '餐費' 的單引號拿掉。結果出現 no such column: 餐費 的錯誤。我的理解是：有單引號代表是『值』，沒有引號會被當成欄位名稱，而資料表裡沒有叫餐費的欄位。"
+  ],
+  q11: [
+    "我把 IS NULL 改成 = NULL。結果是 0 列，而且沒有報錯，最容易讓人以為『沒有這種資料』。我的理解是：NULL 是未知，任何值和 NULL 用 = 比較都不是 TRUE，所以一定要用 IS NULL。",
+    "我改成 IS NOT NULL。列數從 4 列變成 60 列，4 + 60 = 64，剛好是陳小明全部的交易。我的理解是：IS NULL 和 IS NOT NULL 剛好互補，可以用來檢查資料有沒有缺漏。",
+    "我改用 COUNT(*) 和 COUNT(merchant)。得到 64 和 60，差了 4，就是沒填商家的筆數。我的理解是：COUNT(欄位) 不算 NULL，SUM、AVG 這類聚合函數遇到 NULL 也會略過。",
+    "我用 COALESCE 把 NULL 換成文字。還是 4 列，只是商家變成「（未填商家）」、備註變成「（無備註）」。我的理解是：COALESCE 只改變顯示的內容，不會修改資料表。"
+  ]
+};
+
+/* ===== 修改版的詳細說明（顯示在「為什麼會這樣？」，順序同 variants）===== */
+const WHY_LONG = {
+  q1: [
+    "結果變化：列數從 24 列變成 17 列，少了 7 列。\n原因：改成 > '2026-11-05' 之後，起點變成 11/05 之後，所以 11/01 到 11/05 的 7 筆交易都不見了（包含 11/05 當天的生活費與晚餐，以及 11/01、11/03、11/04 的早餐、午餐、零食、捷運）。\n重點：>= 包含邊界值，> 不包含。查日期範圍時要先想清楚起點和終點算不算在內，否則會少算或多算。",
+    "結果變化：列數與內容完全相同（都是 24 列），只有順序不同：最前面變成 8000（生活費）、6000（林小華的生活費）、3600（打工收入），後面才是小額支出。\n原因：SQL 的執行順序是 FROM → WHERE → ORDER BY。WHERE 先挑出 11 月的 24 筆，ORDER BY 最後才決定怎麼排，所以排序方式不會影響挑出哪些列。\n重點：DESC 是由大到小，ASC（預設）是由小到大。想看時間順序就用日期排序，想看金額大的就用 amount DESC。",
+    "結果變化：沒有任何資料，只出現錯誤訊息 no such column: amout。\n原因：SQLite 執行前會先檢查 SELECT 裡的欄位名稱是否存在。transactions 表只有 amount，沒有 amout，所以整個查詢不會執行。\n重點：遇到 no such column，先檢查拼字，再確認那個欄位是不是在 FROM 或 JOIN 的表裡。"
+  ],
+  q2: [
+    "結果變化：列數從 30 列變成 32 列，多出 10/05 的生活費（8000）和 10/20 的打工收入（4500）。\n原因：原本的 c.type = 'expense' 把收入類的分類排除。type 欄位在 categories 表，不在 transactions 表，所以要 JOIN categories 才能用它區分收入和支出。\n重點：同一張交易表同時放收入與支出，是靠分類的 type 來區分，查詢時要注意是否需要這個條件，否則收入會混進支出。",
+    "結果變化：只剩 3 列（10/08 午餐 120、10/15 電影 400、10/20 晚餐 180），都是林小華的支出。\n原因：transactions 表沒有 user_id，使用者是透過 account_id → accounts.user_id 間接得到的，所以要 JOIN accounts 才能依使用者篩選。\n重點：這就是把使用者、帳戶、交易拆成不同表的做法，查詢時再用 JOIN 接起來。",
+    "結果變化：列數從 30 列暴增到 396 列，而且分類名稱和商家對不起來（例如 10/01 在早餐店出現交通、娛樂等分類）。\n原因：FROM transactions, categories 沒有寫 t.category_id = c.category_id，每一筆交易都會和每一個分類配對一次。10 月有 36 筆交易、11 個分類，36 × 11 = 396。\n重點：這叫笛卡兒積。忘記寫 JOIN 條件不會報錯，只會得到錯誤的結果，列數異常多時要先檢查 JOIN 條件。"
+  ],
+  q3: [
+    "結果變化：列數仍是 9 列，但數值變成每筆平均，排名也改變。原本總額第一是晚餐（1530），改成平均後，手機網路費（599）第一、娛樂（300）第二，晚餐掉到第五（約 139）。\n原因：SUM 看的是總共花多少，會被筆數影響（晚餐有 11 筆）；AVG 看的是每次平均花多少，筆數多但單筆小的分類平均就低。\n重點：想知道哪一類總共花最多用 SUM，想知道哪一類單次最貴用 AVG，兩者回答的是不同的問題。",
+    "結果變化：列數從 9 列變成 11 列，多出生活費（5 筆共 36000）和打工收入（3 筆共 12100），而且這兩列金額最大，排到最前面。\n原因：WHERE 是在分組前先過濾列。拿掉 type = 'expense' 後，收入的交易也會被送進 GROUP BY，各自形成一組。\n重點：WHERE 控制哪些列進來分組，HAVING 控制分組之後留下哪些組。同時統計收入和支出時，建議把 c.type 也放進 SELECT。",
+    "結果變化：仍是 9 列，SQLite 沒有報錯，但 merchant 只顯示每組其中一個商家（例如晚餐只顯示便當店，其實還有麵店、火鍋店等）。\n原因：GROUP BY c.category_id 之後，一組裡有很多筆交易，merchant 有好幾個不同的值，卻沒有說要取哪一個。SQLite 會隨便挑一個，PostgreSQL 等資料庫則會直接報錯。\n重點：SELECT 的欄位要嘛出現在 GROUP BY 裡，要嘛放在 SUM、COUNT 這類聚合函數裡。SQLite 不報錯，不代表結果是對的。"
+  ],
+  q4: [
+    "結果變化：income、expense 都變大了一點，例如 2026-09 的 income 從 12000 變成 12009，expense 從 1379 變成 1381。\n原因：CASE WHEN ... ELSE 1 會讓不符合條件的列每列貢獻 1。9 月有 9 筆支出，所以 income 多了 9；有 2 筆收入，所以 expense 多了 2。\n重點：條件聚合要加總時，不符合條件的列要給 0（不影響加總的值），不要給其他數字。",
+    "結果變化：從 3 列（三個月）變成 2 列：支出 58 筆共 7129 元，收入 6 筆共 36100 元，月份不見了。\n原因：GROUP BY 的欄位決定一列代表什麼。原本每個月一列，改成 c.type 後，每種收支類型一列。\n重點：想看每月趨勢就用月份分組，想看整體收支比例就用 type 分組。"
+  ],
+  q5: [
+    "結果變化：列數從 7 列變成 4 列，只剩晚餐（1350）、手機網路費（1198）、午餐（1115）、娛樂（1100）；文具、日用品、早餐被濾掉。\n原因：HAVING 對分組後的總額做篩選，門檻提高，通過的分類就變少。\n重點：把門檻調高可以快速找出大額分類，列數會隨門檻提高而減少。",
+    "結果變化：沒有資料，出現錯誤 misuse of aggregate: SUM()。\n原因：SQL 的執行順序是 FROM → WHERE → GROUP BY → HAVING → SELECT。WHERE 在分組之前執行，那時候還沒有算出 SUM，所以 WHERE 不能使用聚合函數。\n重點：對每一列的條件放 WHERE（例如 user_id、type），對分組後結果的條件放 HAVING（例如 SUM > 500）。"
+  ],
+  q6: [
+    "結果變化：列數從 5 列變成 4 列，沒有交通（11 月沒有設預算）。娛樂預算 300 花了 350，超支 50；午餐預算 600 花了 380，還剩 220。\n原因：預算是以使用者、分類、月份設定的，所以 b.month = '2026-11' 只會找到 11 月的預算；而且 11 月只記到 11/12，spent 比整月少，看起來比較寬裕。\n重點：比較不同月份時要注意資料是不是同樣的天數，否則會誤以為花得比較少。",
+    "結果變化：這份資料中結果完全相同（5 列），因為 10 月每個有預算的分類都有消費紀錄。\n原因：LEFT JOIN 會保留左邊（budgets）的所有列，即使右邊（transactions）沒有對到；INNER JOIN 只保留兩邊都對得到的列。差別只會出現在有預算但完全沒花錢的分類：LEFT JOIN 會顯示 spent = 0（用 COALESCE 把 NULL 變成 0），INNER JOIN 則會讓那一列消失。\n重點：想看預算有沒有用完，要用 LEFT JOIN，沒花錢的分類才不會被漏掉。你可以自己新增一筆沒有消費的預算來測試差別。",
+    "結果變化：列數從 5 列變成 2 列，只剩午餐（預算 500、花 550、超支 50）和娛樂（預算 400、花 470、超支 70）。\n原因：HAVING SUM(t.amount) > b.budget_amount 在分組後比較實際支出和預算，只保留超支的組。\n重點：這是記帳系統很實用的功能，可以自動找出超支的項目。"
+  ],
+  q7: [
+    "結果變化：0 列。\n原因：MAX 是所有支出中最大的一筆，沒有任何一筆支出會大於最大值，所以條件永遠不成立。\n重點：子查詢先算出一個基準值，外層再拿每一筆去比較。基準值換成 AVG 或 MAX，門檻就完全不同。0 列不是錯誤，只是沒有符合條件的資料。",
+    "結果變化：列數從 16 列變成 47 列。16 + 47 = 63，剛好是全部的支出筆數。\n原因：少數大額支出（手機月租 599、電影 400、日用品 399 等）把平均拉高，所以高於平均的只有 16 筆，絕大多數日常小額消費（早餐、午餐、捷運）都低於平均。\n重點：平均值會被極端值影響，所以高於平均的筆數通常比低於平均的少。"
+  ],
+  q8: [
+    "結果變化：每個帳戶的餘額都變大了，例如陳小明的錢包現金從 609 變成 9391，LINE Pay 從 960 變成 4040。\n原因：amount 一律存正數，收入還是支出要靠分類的 type 判斷。這個版本把所有金額直接加上去，支出被當成收入，所以餘額被灌水。\n重點：金額一律存正數可以避免正負號混亂，但查詢時就要用 CASE WHEN 依 type 決定加還是減。",
+    "結果變化：列數從 4 列變成 3 列，只剩陳小明的銀行活存（46902）、LINE Pay（960）、錢包現金（609），餘額和原本相同。\n原因：WHERE u.user_id = 1 只是縮小範圍，每個帳戶的餘額是分別用自己的收入和支出算出來的，不會受其他使用者影響。\n重點：帳戶餘額 = 期初餘額 + 收入 - 支出。"
+  ],
+  q9: [
+    "結果變化：從 4 列變成 1 列 1 欄：1195。\n原因：沒有 GROUP BY，SUM 會把整個結果當成一組加總，所以只剩一個總數。這個數字剛好等於原本 4 列的總和：440 + 380 + 230 + 145 = 1195。\n重點：想看細項要用 GROUP BY，只想知道這個月餐費總共花多少，就不要 GROUP BY，直接 SUM。",
+    "結果變化：仍是 4 列，但數字改變：晚餐 6 筆 800、午餐 6 筆 550、零食飲料 5 筆 238、早餐 4 筆 230。晚餐、午餐、零食飲料都比 11 月多，早餐剛好一樣。\n原因：10 月是完整的一個月，11 月只記到 11/12，天數不同，所以消費比較少。\n重點：比較兩個月的支出要留意天數是否相同，必要時可以改成比較平均每天花多少。",
+    "結果變化：列數從 4 列變成 8 列，多出日用品（399）、娛樂（350）、文具（180）、交通（90）。\n原因：category_group = '餐費' 只挑出屬於餐費的 4 個分類；改成 type = 'expense' 後，所有支出分類都符合，所以不只餐費。\n重點：category_group 專門用來把相近的分類歸成一組，方便統計餐費、生活這類較大的類別。",
+    "結果變化：只剩 2 列（晚餐 440、午餐 380），早餐和零食飲料不見了，餐費被低估。\n原因：手動列出分類名稱時很容易漏掉，這個版本只列了午餐和晚餐。\n重點：用 category_group = '餐費' 比較不容易漏，而且將來新增宵夜分類，只要它的群組是餐費，查詢就不用修改。這也是資料庫設計加入 category_group 欄位的理由。"
+  ],
+  q10: [
+    "結果變化：列數從 5 列變成 14 列，變成這個月所有餐費的明細（早餐、午餐、晚餐、零食飲料）。\n原因：<> 是不等於，= 是等於，條件剛好相反。5 + 14 = 19，剛好是陳小明 11 月全部的支出筆數。\n重點：兩個查詢合起來就是這個月所有的支出，可以用來互相檢查有沒有漏資料。",
+    "結果變化：和原本完全一樣（5 列，內容也相同）。\n原因：<> '餐費' 和 NOT IN（子查詢找出餐費群組的分類）在邏輯上是同一件事，只是寫法不同。\n重點：同一個問題常常有多種寫法，結果相同就代表邏輯相同。<> 比較簡單易讀，子查詢適合條件比較複雜的時候。",
+    "結果變化：從 5 列明細變成 4 列彙總：生活 1 筆 399、休閒 1 筆 350、學業 1 筆 180、交通 2 筆 90。\n原因：加了 GROUP BY c.category_group，同一組變成一列，所以商家、日期這些細節不見了，只剩筆數和總額。\n重點：明細適合查哪一天花在哪，彙總適合看整體分布。",
+    "結果變化：沒有資料，只出現錯誤 no such column: 餐費。\n原因：單引號代表這是一段文字；沒有單引號時，SQLite 會把餐費當成欄位名稱去找，但資料表裡沒有叫餐費的欄位，所以報錯。\n重點：有單引號是值，沒有引號是欄位名稱。category_group 是欄位名稱，'餐費' 才是要比對的值。"
+  ],
+  q11: [
+    "結果變化：0 列，而且沒有任何錯誤訊息。\n原因：NULL 代表不知道或沒有值。任何值和 NULL 用 = 比較，結果都是 UNKNOWN（不是 TRUE），而 WHERE 只留下結果是 TRUE 的列，所以一列都選不到。\n重點：這是最容易踩的陷阱，沒有報錯但結果是錯的。判斷是否為 NULL 一定要用 IS NULL 或 IS NOT NULL，不能用 = 或 <>。",
+    "結果變化：列數從 4 列變成 60 列。\n原因：IS NOT NULL 找出有填商家的交易，和 IS NULL 互補。4 + 60 = 64，剛好是陳小明全部的交易。\n重點：可以用 IS NULL 和 IS NOT NULL 檢查資料有沒有缺漏。",
+    "結果變化：只有 1 列 3 個數字：all_rows = 64、with_merchant = 60、missing_merchant = 4。\n原因：COUNT(*) 算所有列；COUNT(欄位) 只算該欄位不是 NULL 的列。兩者相減就是 NULL 的筆數 4，和原始查詢的列數相同。\n重點：SUM、AVG、COUNT(欄位) 等聚合函數都會自動略過 NULL。如果欄位有 NULL，平均就只算有值的那幾列。",
+    "結果變化：還是 4 列，只是原本顯示 NULL 的地方變成「（未填商家）」和「（無備註）」。\n原因：COALESCE(欄位, 預設值) 會回傳第一個不是 NULL 的值：欄位有值就用欄位，是 NULL 就用預設值。\n重點：COALESCE 只改變顯示的內容，不會修改資料表。Q6 用 COALESCE(SUM(...), 0) 把沒有消費的 NULL 變成 0，也是同樣的概念。"
+  ]
+};
+
+
+/* ===== 查詢題目（expect 內的 {n} 會自動換成原始 SQL 的實際列數）===== */
+const QUERIES = [
+{
+  id:'q1', short:'日期篩選', title:'Q1　2026 年 11 月有哪些交易？',
+  question:'列出 2026 年 11 月所有使用者的交易（日期、商家、金額），依日期由舊到新排序。',
+  concept:'單表查詢：SELECT、WHERE（日期範圍）、ORDER BY',
+  sql:`SELECT txn_id, txn_date, merchant, amount
+FROM transactions
+WHERE txn_date >= '2026-11-01'
+  AND txn_date <  '2026-12-01'
+ORDER BY txn_date;`,
+  expect:'預期 {n} 列，日期都落在 11 月，包含生活費、打工收入等收入，以及各種支出。',
+  variants:[
+    {label:'把 >= 改成 >，起點改成 2026-11-05', sql:`SELECT txn_id, txn_date, merchant, amount
+FROM transactions
+WHERE txn_date >  '2026-11-05'
+  AND txn_date <  '2026-12-01'
+ORDER BY txn_date;`,
+     why:'「>」不包含邊界值，11/05 當天的資料（生活費、晚餐等）都被排除，列數變少。日期範圍的邊界是否包含，會直接改變結果。'},
+    {label:'改成金額由大到小排序', sql:`SELECT txn_id, txn_date, merchant, amount
+FROM transactions
+WHERE txn_date >= '2026-11-01'
+  AND txn_date <  '2026-12-01'
+ORDER BY amount DESC;`,
+     why:'篩選條件沒變，所以列數與內容完全相同，只有順序改變：ORDER BY 只影響排列，不影響哪些列被選出。'},
+    {label:'故意寫錯欄位名稱（錯誤示範）', sql:`SELECT txn_id, txn_date, merchant, amout
+FROM transactions
+WHERE txn_date >= '2026-11-01'
+ORDER BY txn_date;`,
+     why:'欄位 amout 不存在（應為 amount），SQLite 會回報 no such column 錯誤，而不是回傳結果。表示 SQL 在執行前會先檢查欄位名稱。'}
+  ]
+},
+{
+  id:'q2', short:'JOIN 明細', title:'Q2　我 10 月的支出明細',
+  question:'列出陳小明（user_id = 1）在 2026 年 10 月的所有「支出」明細，顯示日期、分類名稱、商家與金額。',
+  concept:'多表 JOIN：transactions → accounts（找出使用者）、transactions → categories（取得分類名稱與收支類型）',
+  sql:`SELECT t.txn_date, c.category_name, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND t.txn_date BETWEEN '2026-10-01' AND '2026-10-31'
+ORDER BY t.txn_date;`,
+  expect:'預期 {n} 列，全為支出（早餐、午餐、晚餐、零食飲料、文具…），不含生活費與打工收入，也不含使用者 2 的資料。',
+  variants:[
+    {label:'拿掉 c.type = \'expense\' 條件', sql:`SELECT t.txn_date, c.category_name, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND t.txn_date BETWEEN '2026-10-01' AND '2026-10-31'
+ORDER BY t.txn_date;`,
+     why:'少了「只要支出」的限制，10/05 的生活費與 10/20 的打工收入也會出現，列數增加 2 列。type 在 categories 表，所以才需要 JOIN 分類表來判斷收支。'},
+    {label:'把 a.user_id = 1 改成 2', sql:`SELECT t.txn_date, c.category_name, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 2
+  AND c.type = 'expense'
+  AND t.txn_date BETWEEN '2026-10-01' AND '2026-10-31'
+ORDER BY t.txn_date;`,
+     why:'帳戶屬於不同使用者，換成 user_id = 2 後只剩林小華 10 月的 3 筆支出。使用者資訊是透過 accounts 表間接取得。'},
+    {label:'忘記寫 JOIN 條件（笛卡兒積）', sql:`SELECT t.txn_date, c.category_name, t.merchant, t.amount
+FROM transactions AS t, categories AS c
+WHERE t.txn_date BETWEEN '2026-10-01' AND '2026-10-31'
+ORDER BY t.txn_date;`,
+     why:'沒有 t.category_id = c.category_id，每筆交易會和 11 個分類兩兩配對，列數暴增（交易數 × 11），且分類名稱與交易毫無關係。這就是遺漏 JOIN 條件造成的笛卡兒積。'}
+  ]
+},
+{
+  id:'q3', short:'各分類支出', title:'Q3　各分類的總支出排行',
+  question:'統計所有使用者各「支出分類」的總金額與筆數，由高到低排序。',
+  concept:'GROUP BY、聚合函數 SUM / COUNT、JOIN 分類表、ORDER BY DESC',
+  sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+GROUP BY c.category_id, c.category_name
+ORDER BY total_amount DESC;`,
+  expect:'預期 {n} 列（每個有消費的支出分類一列），可以看出哪一類花最多、哪一類筆數最多。',
+  variants:[
+    {label:'把 SUM 改成 AVG（平均）', sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       AVG(t.amount) AS avg_amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+GROUP BY c.category_id, c.category_name
+ORDER BY avg_amount DESC;`,
+     why:'分組方式不變，列數相同，但數值改為「每筆平均」。總額大的分類不一定平均高：例如午餐筆數多、單筆小，總額排名靠前但平均不高；娛樂筆數少、單筆大，平均會變得很高。'},
+    {label:'拿掉 WHERE，連收入分類一起統計', sql:`SELECT c.category_name, c.type,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+GROUP BY c.category_id, c.category_name, c.type
+ORDER BY total_amount DESC;`,
+     why:'WHERE 在分組前先過濾列。拿掉後，生活費與打工收入也被分成各自的群組，金額最大；列數比原始查詢多 2 列。'},
+    {label:'SELECT 了沒有分組的欄位', sql:`SELECT c.category_name, t.merchant, SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+GROUP BY c.category_id;`,
+     why:'merchant 不在 GROUP BY 也不在聚合函數內。SQLite 不會報錯，但會從群組中任選一個商家顯示，結果不可靠；多數資料庫（如 MySQL 嚴格模式、PostgreSQL）會直接報錯。這是常見的 GROUP BY 錯誤。'}
+  ]
+},
+{
+  id:'q4', short:'每月收支', title:'Q4　我每個月的收入、支出與結餘',
+  question:'算出陳小明每個月的總收入、總支出與淨結餘（注意 11 月只記到 11/12）。',
+  concept:'CASE WHEN 條件聚合、substr 取出月份、GROUP BY 月份',
+  sql:`SELECT substr(t.txn_date, 1, 7) AS month,
+       SUM(CASE WHEN c.type = 'income'  THEN t.amount ELSE 0 END) AS income,
+       SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 0 END) AS expense,
+       SUM(CASE WHEN c.type = 'income'  THEN t.amount ELSE -t.amount END) AS net
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+GROUP BY month
+ORDER BY month;`,
+  expect:'預期 {n} 列（2026-09、2026-10、2026-11），net = income − expense。11 月因為還沒結束，支出比較少。',
+  variants:[
+    {label:'ELSE 0 改成 ELSE 1（錯誤的條件聚合）', sql:`SELECT substr(t.txn_date, 1, 7) AS month,
+       SUM(CASE WHEN c.type = 'income'  THEN t.amount ELSE 1 END) AS income,
+       SUM(CASE WHEN c.type = 'expense' THEN t.amount ELSE 1 END) AS expense
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+GROUP BY month
+ORDER BY month;`,
+     why:'不符合條件的列原本貢獻 0，現在每列貢獻 1，income 與 expense 都被灌水（各多出另一類的筆數）。條件聚合的 ELSE 值必須是「不影響加總的值」，即 0。'},
+    {label:'依分類 type 分組，而非月份', sql:`SELECT c.type,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+GROUP BY c.type;`,
+     why:'GROUP BY 換成 c.type 後結果只剩 2 列（income / expense），失去月份維度。GROUP BY 的欄位決定「結果以什麼為單位」。'}
+  ]
+},
+{
+  id:'q5', short:'HAVING', title:'Q5　哪些分類累計支出超過 500 元？',
+  question:'找出陳小明（user_id = 1）累計支出超過 500 元的分類，顯示分類與總額。',
+  concept:'GROUP BY + HAVING（對群組做條件過濾）',
+  sql:`SELECT c.category_name, SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+GROUP BY c.category_id, c.category_name
+HAVING SUM(t.amount) > 500
+ORDER BY total_amount DESC;`,
+  expect:'預期 {n} 列，只保留累計支出超過 500 元的分類，累計金額小的分類（交通、零食飲料）會被濾掉。',
+  variants:[
+    {label:'門檻改成 1,000', sql:`SELECT c.category_name, SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+GROUP BY c.category_id, c.category_name
+HAVING SUM(t.amount) > 1000
+ORDER BY total_amount DESC;`,
+     why:'門檻提高，只剩累計金額更大的分類通過，列數比原始查詢少。'},
+    {label:'把 HAVING 誤寫成 WHERE（錯誤示範）', sql:`SELECT c.category_name, SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND SUM(t.amount) > 500
+GROUP BY c.category_id, c.category_name;`,
+     why:'WHERE 在分組之前執行，此時還沒有 SUM 的結果，聚合函數不能出現在 WHERE，SQLite 會報 misuse of aggregate 錯誤。對「群組結果」的條件必須用 HAVING。'}
+  ]
+},
+{
+  id:'q6', short:'預算比較', title:'Q6　10 月各分類的預算與實際支出',
+  question:'比較陳小明 2026 年 10 月各分類的預算、實際支出與剩餘額；剩餘為負數代表超支。',
+  concept:'LEFT JOIN、子查詢（IN）、聚合、運算欄位',
+  sql:`SELECT c.category_name,
+       b.budget_amount,
+       COALESCE(SUM(t.amount), 0)                  AS spent,
+       b.budget_amount - COALESCE(SUM(t.amount), 0) AS remaining
+FROM budgets AS b
+JOIN categories AS c ON b.category_id = c.category_id
+LEFT JOIN transactions AS t
+       ON t.category_id = b.category_id
+      AND substr(t.txn_date, 1, 7) = b.month
+      AND t.account_id IN (SELECT account_id FROM accounts WHERE user_id = b.user_id)
+WHERE b.user_id = 1
+  AND b.month = '2026-10'
+GROUP BY b.budget_id, c.category_name, b.budget_amount
+ORDER BY remaining;`,
+  expect:'預期 {n} 列（10 月有設定預算的分類），依剩餘金額由小到大排序，remaining 為負數的就是超支項目。',
+  variants:[
+    {label:'月份改成 2026-11', sql:`SELECT c.category_name,
+       b.budget_amount,
+       COALESCE(SUM(t.amount), 0)                  AS spent,
+       b.budget_amount - COALESCE(SUM(t.amount), 0) AS remaining
+FROM budgets AS b
+JOIN categories AS c ON b.category_id = c.category_id
+LEFT JOIN transactions AS t
+       ON t.category_id = b.category_id
+      AND substr(t.txn_date, 1, 7) = b.month
+      AND t.account_id IN (SELECT account_id FROM accounts WHERE user_id = b.user_id)
+WHERE b.user_id = 1
+  AND b.month = '2026-11'
+GROUP BY b.budget_id, c.category_name, b.budget_amount
+ORDER BY remaining;`,
+     why:'11 月只設定了 4 個預算（沒有交通預算），所以剩 4 列。而且 11 月只記到 11/12，spent 比整月少，剩餘金額看起來會比較寬裕。'},
+    {label:'LEFT JOIN 改成 INNER JOIN', sql:`SELECT c.category_name,
+       b.budget_amount,
+       COALESCE(SUM(t.amount), 0)                  AS spent,
+       b.budget_amount - COALESCE(SUM(t.amount), 0) AS remaining
+FROM budgets AS b
+JOIN categories AS c ON b.category_id = c.category_id
+JOIN transactions AS t
+       ON t.category_id = b.category_id
+      AND substr(t.txn_date, 1, 7) = b.month
+      AND t.account_id IN (SELECT account_id FROM accounts WHERE user_id = b.user_id)
+WHERE b.user_id = 1
+  AND b.month = '2026-10'
+GROUP BY b.budget_id, c.category_name, b.budget_amount
+ORDER BY remaining;`,
+     why:'本資料中 10 月每個預算分類都有交易，所以結果與原始查詢相同。但若某分類有預算卻「完全沒花錢」，INNER JOIN 會讓該列消失，LEFT JOIN 則保留並顯示 spent = 0。可自行新增一筆預算測試差異。'},
+    {label:'只顯示超支項目（加 HAVING）', sql:`SELECT c.category_name,
+       b.budget_amount,
+       SUM(t.amount)                  AS spent,
+       b.budget_amount - SUM(t.amount) AS remaining
+FROM budgets AS b
+JOIN categories AS c ON b.category_id = c.category_id
+LEFT JOIN transactions AS t
+       ON t.category_id = b.category_id
+      AND substr(t.txn_date, 1, 7) = b.month
+      AND t.account_id IN (SELECT account_id FROM accounts WHERE user_id = b.user_id)
+WHERE b.user_id = 1
+  AND b.month = '2026-10'
+GROUP BY b.budget_id, c.category_name, b.budget_amount
+HAVING SUM(t.amount) > b.budget_amount;`,
+     why:'HAVING 對每個群組的加總做過濾，只留下實際支出大於預算的分類，結果只剩超支的列。'}
+  ]
+},
+{
+  id:'q7', short:'子查詢', title:'Q7　高於平均單筆支出的交易',
+  question:'找出單筆金額高於「所有支出交易平均金額」的交易，顯示日期、商家、分類與金額。',
+  concept:'子查詢（純量子查詢）、JOIN、AVG',
+  sql:`SELECT t.txn_date, t.merchant, c.category_name, t.amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+  AND t.amount > (
+        SELECT AVG(t2.amount)
+        FROM transactions AS t2
+        JOIN categories AS c2 ON t2.category_id = c2.category_id
+        WHERE c2.type = 'expense'
+      )
+ORDER BY t.amount DESC;`,
+  expect:'預期 {n} 列，都是比較大筆的消費（手機月租、聚餐、電影、KTV、日用品等），早餐、捷運這類小額支出不會出現。',
+  variants:[
+    {label:'子查詢改成 MAX（高於最大值）', sql:`SELECT t.txn_date, t.merchant, c.category_name, t.amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+  AND t.amount > (
+        SELECT MAX(t2.amount)
+        FROM transactions AS t2
+        JOIN categories AS c2 ON t2.category_id = c2.category_id
+        WHERE c2.type = 'expense'
+      );`,
+     why:'沒有任何支出會比「最大的支出」更大，所以回傳 0 列。比較的基準值（AVG → MAX）改變了「高於」的門檻。'},
+    {label:'改成「低於」平均', sql:`SELECT t.txn_date, t.merchant, c.category_name, t.amount
+FROM transactions AS t
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE c.type = 'expense'
+  AND t.amount < (
+        SELECT AVG(t2.amount)
+        FROM transactions AS t2
+        JOIN categories AS c2 ON t2.category_id = c2.category_id
+        WHERE c2.type = 'expense'
+      )
+ORDER BY t.amount DESC;`,
+     why:'方向反過來，得到大量小額日常消費（早餐、午餐、零食、交通）。少數大筆支出（手機月租、聚餐、KTV）把平均拉高，因此「低於平均」的列數遠多於「高於平均」。'}
+  ]
+},
+{
+  id:'q8', short:'帳戶餘額', title:'Q8　每個帳戶目前的餘額',
+  question:'計算每個帳戶的目前餘額：期初餘額 + 總收入 − 總支出，並顯示帳戶擁有者。',
+  concept:'LEFT JOIN、CASE WHEN、COALESCE、多表 JOIN',
+  sql:`SELECT u.name, a.account_name,
+       a.initial_balance
+         + COALESCE(SUM(CASE WHEN c.type = 'income'  THEN  t.amount
+                             WHEN c.type = 'expense' THEN -t.amount END), 0) AS balance
+FROM accounts AS a
+JOIN users AS u ON a.user_id = u.user_id
+LEFT JOIN transactions AS t ON t.account_id  = a.account_id
+LEFT JOIN categories   AS c ON t.category_id = c.category_id
+GROUP BY a.account_id, u.name, a.account_name, a.initial_balance
+ORDER BY balance DESC;`,
+  expect:'預期 {n} 列（4 個帳戶）。銀行活存有生活費與打工收入，餘額最高；錢包現金與 LINE Pay 因為只有支出，餘額比期初少。',
+  variants:[
+    {label:'支出也當成正數相加（錯誤計算）', sql:`SELECT u.name, a.account_name,
+       a.initial_balance + COALESCE(SUM(t.amount), 0) AS balance
+FROM accounts AS a
+JOIN users AS u ON a.user_id = u.user_id
+LEFT JOIN transactions AS t ON t.account_id = a.account_id
+GROUP BY a.account_id, u.name, a.account_name, a.initial_balance
+ORDER BY balance DESC;`,
+     why:'所有金額都加上去，沒有區分收入與支出，支出被當成收入，現金與 LINE Pay 的餘額反而比期初更多。因為 amount 一律存正數，必須靠分類 type 決定正負號。'},
+    {label:'只看使用者 1 的帳戶', sql:`SELECT u.name, a.account_name,
+       a.initial_balance
+         + COALESCE(SUM(CASE WHEN c.type = 'income'  THEN  t.amount
+                             WHEN c.type = 'expense' THEN -t.amount END), 0) AS balance
+FROM accounts AS a
+JOIN users AS u ON a.user_id = u.user_id
+LEFT JOIN transactions AS t ON t.account_id  = a.account_id
+LEFT JOIN categories   AS c ON t.category_id = c.category_id
+WHERE u.user_id = 1
+GROUP BY a.account_id, u.name, a.account_name, a.initial_balance
+ORDER BY balance DESC;`,
+     why:'加上 WHERE u.user_id = 1 後只剩 3 個帳戶，每個帳戶的餘額計算方式不變，只是範圍縮小。'}
+  ]
+},
+{
+  id:'q9', short:'本月餐費', title:'Q9　這個月（2026 年 11 月）餐費花多少？',
+  question:'統計陳小明 2026 年 11 月的餐費，分別顯示早餐、午餐、晚餐、零食飲料各花多少錢、幾筆。「餐費」是分類群組 category_group。',
+  concept:'JOIN、WHERE 多條件、用 category_group 統計一組分類、GROUP BY、SUM',
+  sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.category_group = '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+GROUP BY c.category_id, c.category_name
+ORDER BY total_amount DESC;`,
+  expect:'預期 {n} 列：早餐、午餐、晚餐、零食飲料各一列。把這幾列金額加起來，就是這個月（到 11/12）的餐費總額。',
+  variants:[
+    {label:'只要一個總額（拿掉 GROUP BY）', sql:`SELECT SUM(t.amount) AS meal_total
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.category_group = '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-11';`,
+     why:'沒有 GROUP BY，整個查詢結果被當成一組，只回傳 1 列 1 欄：本月餐費總額，等於原本每個分類金額的加總。想知道細項用 GROUP BY，只想要總額就不用。'},
+    {label:'月份改成 2026-10', sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.category_group = '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-10'
+GROUP BY c.category_id, c.category_name
+ORDER BY total_amount DESC;`,
+     why:'10 月是完整一個月，11 月只記到 11/12，所以 10 月各分類的筆數與金額都比較大。比較不同月份時，要注意兩邊的天數是否一樣。'},
+    {label:'拿掉分類群組條件', sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+GROUP BY c.category_id, c.category_name
+ORDER BY total_amount DESC;`,
+     why:'把「餐費」限制換成「所有支出」，交通、文具、娛樂、日用品也會出現，列數變多。category_group 讓我們可以只挑出同一類的分類。'},
+    {label:'用分類名稱寫死（容易漏掉）', sql:`SELECT c.category_name,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.category_name IN ('午餐', '晚餐')
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+GROUP BY c.category_id, c.category_name
+ORDER BY total_amount DESC;`,
+     why:'手動列出分類名稱時漏寫了早餐和零食飲料，餐費被低估（只剩 2 列）。用 category_group = \'餐費\' 的好處是：以後新增「宵夜」之類的餐費分類，查詢不用改也不會漏。'}
+  ]
+},
+{
+  id:'q10', short:'其他開支', title:'Q10　這個月還有哪些「餐費以外」的開支？',
+  question:'列出陳小明 2026 年 11 月除了餐費以外的所有支出明細（日期、分類、群組、商家、金額）。',
+  concept:'WHERE 排除條件（<>）、JOIN、日期篩選',
+  sql:`SELECT t.txn_date, c.category_name, c.category_group, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND c.category_group <> '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+ORDER BY t.txn_date;`,
+  expect:'預期 {n} 列：交通、娛樂、文具、日用品等非餐費支出，每一列的 category_group 都不是「餐費」。',
+  variants:[
+    {label:'把 <> 改成 =（只看餐費）', sql:`SELECT t.txn_date, c.category_name, c.category_group, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND c.category_group = '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+ORDER BY t.txn_date;`,
+     why:'<> 表示「不等於」，= 表示「等於」，條件剛好相反，所以得到的是 Q9 那些餐費的明細。兩個查詢合起來，剛好是這個月所有的支出。'},
+    {label:'改用 NOT IN 子查詢（寫法不同）', sql:`SELECT t.txn_date, c.category_name, c.category_group, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND t.category_id NOT IN (SELECT category_id FROM categories WHERE category_group = '餐費')
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+ORDER BY t.txn_date;`,
+     why:'寫法從「<>」變成「NOT IN 子查詢」，但意思相同，所以結果和原始查詢完全一樣。同一個問題可以有不同寫法，只要邏輯相同結果就相同。'},
+    {label:'改成每個群組加總', sql:`SELECT c.category_group,
+       COUNT(*)      AS txn_count,
+       SUM(t.amount) AS total_amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.type = 'expense'
+  AND c.category_group <> '餐費'
+  AND substr(t.txn_date, 1, 7) = '2026-11'
+GROUP BY c.category_group
+ORDER BY total_amount DESC;`,
+     why:'加上 GROUP BY 之後，結果從「每一筆明細一列」變成「每個群組一列」，只留下筆數與總額。明細看得細，彙總看得清楚整體。'},
+    {label:'忘記幫「餐費」加引號（錯誤示範）', sql:`SELECT t.txn_date, c.category_name, t.merchant, t.amount
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND c.category_group <> 餐費
+  AND substr(t.txn_date, 1, 7) = '2026-11';`,
+     why:'文字值必須用單引號包起來。沒有引號時，SQLite 會把「餐費」當成欄位名稱，找不到就回報 no such column 錯誤。'}
+  ]
+},
+{
+  id:'q11', short:'NULL 值', title:'Q11　哪些交易沒有記錄商家？（NULL 相關）',
+  question:'記帳時有時候太急，沒有填商家（merchant 是 NULL）。找出陳小明這些沒填商家的交易，顯示日期、分類、商家、金額與備註。',
+  concept:'NULL 的判斷（IS NULL）、NULL 與 = 比較、COUNT(*) 與 COUNT(欄位)、COALESCE',
+  sql:`SELECT t.txn_id, t.txn_date, c.category_name, t.merchant, t.amount, t.note
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND t.merchant IS NULL
+ORDER BY t.txn_date;`,
+  expect:'預期 {n} 列，每一列的 merchant 都顯示 NULL（表示沒有填商家）；其中一筆連備註 note 也是 NULL。',
+  variants:[
+    {label:'把 IS NULL 誤寫成 = NULL（錯誤示範）', sql:`SELECT t.txn_id, t.txn_date, c.category_name, t.merchant, t.amount, t.note
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND t.merchant = NULL
+ORDER BY t.txn_date;`,
+     why:'NULL 代表「未知／沒有值」，任何東西和 NULL 用 = 比較，結果都是 UNKNOWN 而不是 TRUE，所以一列都選不到（0 列），而且不會報錯。判斷 NULL 一定要用 IS NULL。'},
+    {label:'改成 IS NOT NULL（有填商家的）', sql:`SELECT t.txn_id, t.txn_date, c.category_name, t.merchant, t.amount, t.note
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND t.merchant IS NOT NULL
+ORDER BY t.txn_date;`,
+     why:'條件剛好相反，得到的是有填商家的所有交易，列數會比原本多很多。IS NULL 和 IS NOT NULL 合起來剛好是陳小明的全部交易。'},
+    {label:'用 COUNT(*) 和 COUNT(merchant) 比較', sql:`SELECT COUNT(*)           AS all_rows,
+       COUNT(t.merchant)  AS with_merchant,
+       COUNT(*) - COUNT(t.merchant) AS missing_merchant
+FROM transactions AS t
+JOIN accounts AS a ON t.account_id = a.account_id
+WHERE a.user_id = 1;`,
+     why:'COUNT(*) 算所有列，COUNT(欄位) 只算「不是 NULL」的列，所以兩者的差就是沒填商家的筆數，和原始查詢的列數相同。聚合函數（COUNT、SUM、AVG）遇到 NULL 時會直接略過。'},
+    {label:'用 COALESCE 把 NULL 顯示成文字', sql:`SELECT t.txn_id, t.txn_date, c.category_name,
+       COALESCE(t.merchant, '（未填商家）') AS merchant,
+       t.amount,
+       COALESCE(t.note, '（無備註）')        AS note
+FROM transactions AS t
+JOIN accounts   AS a ON t.account_id  = a.account_id
+JOIN categories AS c ON t.category_id = c.category_id
+WHERE a.user_id = 1
+  AND t.merchant IS NULL
+ORDER BY t.txn_date;`,
+     why:'列數和內容都沒變，只是把 NULL 換成看得懂的文字顯示。COALESCE(欄位, 預設值) 會回傳第一個不是 NULL 的值，原本資料表裡的值並沒有被修改。'}
+  ]
+}
+];
+
+/* ===== 工具函式 ===== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+let db = null, cur = QUERIES[0];
+
+function runSQL(sql){
+  const s = sql.trim().replace(/;+\s*$/,'');
+  if(!/^(select|with)\b/i.test(s)) return {error:'本網站為唯讀練習，只允許執行 SELECT（或 WITH ... SELECT）查詢。'};
+  if(s.includes(';')) return {error:'一次只能執行一個查詢語句，請移除中間的分號。'};
+  try{
+    const r = db.exec(s);
+    if(!r.length) return {columns:[],rows:[]};
+    return {columns:r[0].columns, rows:r[0].values};
+  }catch(e){ return {error:String(e.message||e)}; }
+}
+
+function tableHTML(res, limit=300){
+  if(res.error) return `<div class="err">❌ 錯誤：${esc(res.error)}</div>`;
+  if(!res.columns.length) return '<p class="meta">查詢成功，但沒有回傳任何資料列（0 列）。</p>';
+  let h = `<p class="meta">共 ${res.rows.length} 列</p><div class="scroll"><table><thead><tr>${res.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>`;
+  res.rows.slice(0,limit).forEach(r=>{
+    h += '<tr>'+r.map(v=> v===null ? '<td class="null">NULL</td>' : `<td class="${typeof v==='number'?'num':''}">${esc(typeof v==='number'?(Number.isInteger(v)?v.toLocaleString('en-US'):Math.round(v*100)/100):v)}</td>`).join('')+'</tr>';
+  });
+  return h + '</tbody></table></div>' + (res.rows.length>limit?`<p class="meta">僅顯示前 ${limit} 列</p>`:'');
+}
+
+function summarize(a,b){
+  if(a.error||b.error) return b.error ? '修改後的 SQL 發生錯誤，沒有產生結果。' : '';
+  const same = JSON.stringify(a.rows)===JSON.stringify(b.rows) && JSON.stringify(a.columns)===JSON.stringify(b.columns);
+  if(same) return '兩者的欄位與每一列內容完全相同。';
+  const dr = b.rows.length - a.rows.length;
+  const dc = b.columns.length - a.columns.length;
+  return `列數：${a.rows.length} → ${b.rows.length}（${dr>=0?'+':''}${dr}）；欄位數：${a.columns.length} → ${b.columns.length}（${dc>=0?'+':''}${dc}）。`;
+}
+
+/* ===== ERD ===== */
+function drawERD(){
+  const pos = {users:[20,20],accounts:[340,20],categories:[660,20],transactions:[340,240],budgets:[660,260]};
+  const W=220,H0=28,RH=22;
+  const fk = {accounts:['user_id'],transactions:['account_id','category_id'],budgets:['user_id','category_id']};
+  const h = t => H0+META[t].fields.length*RH;
+  let svg = `<svg viewBox="0 0 900 500" width="100%" style="min-width:760px" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto"><path d="M0 0L10 5L0 10z" fill="#2f86c9"/></marker></defs>`;
+  const line=(p,lx,ly,lab)=>`<polyline points="${p}" fill="none" stroke="#2f86c9" stroke-width="1.8" marker-end="url(#ar)"/><text x="${lx}" y="${ly}" font-size="12" fill="#2f86c9" font-weight="700">${lab}</text>`;
+  svg += line('340,60 240,60',282,52,'N : 1');                               // accounts → users
+  svg += line('450,240 450,158',458,205,'N : 1');                             // transactions → accounts
+  svg += line('560,300 640,300 640,150 660,100',600,290,'N : 1');             // transactions → categories
+  svg += line('770,260 770,136',778,190,'N : 1');                             // budgets → categories
+  svg += line('790,398 790,470 130,470 130,136',460,486,'N : 1 (budgets.user_id → users)'); // budgets → users
+  Object.keys(pos).forEach(t=>{
+    const [x,y]=pos[t];
+    svg += `<rect x="${x}" y="${y}" width="${W}" height="${h(t)}" rx="8" fill="#fff" stroke="#2f86c9" stroke-width="1.6"/>
+    <path d="M${x} ${y+H0}V${y+8}a8 8 0 0 1 8-8H${x+W-8}a8 8 0 0 1 8 8V${y+H0}z" fill="#2f86c9"/>
+    <text x="${x+W/2}" y="${y+19}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${t}</text>`;
+    META[t].fields.forEach((f,i)=>{
+      const fy=y+H0+i*RH+15, isPK=f[2]==='PK', isFK=(fk[t]||[]).includes(f[0]);
+      svg += `<text x="${x+10}" y="${fy}" font-size="11" font-weight="700" fill="${isPK?'#7a4b00':'#14478a'}">${isPK?'PK':isFK?'FK':''}</text>
+      <text x="${x+36}" y="${fy}" font-size="12.5" fill="#1b2a28">${f[0]}</text>
+      <text x="${x+W-8}" y="${fy}" text-anchor="end" font-size="10.5" fill="#888">${f[1]}</text>`;
+    });
+  });
+  $('erd').innerHTML = svg + '</svg>';
+}
+
+/* ===== 資料表瀏覽 ===== */
+function showTable(name){
+  document.querySelectorAll('#tableTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===name));
+  const m = META[name];
+  $('tableDesc').textContent = m.desc;
+  $('fieldTable').innerHTML = '<thead><tr><th>欄位</th><th>型態</th><th>鍵／限制</th><th>說明</th></tr></thead><tbody>'+
+    m.fields.map(f=>`<tr><td><b>${f[0]}</b></td><td>${f[1]}</td><td>${f[2]?`<span class="badge ${f[2]==='PK'?'pk':f[2].startsWith('FK')?'fk':''}">${esc(f[2])}</span>`:''}</td><td>${esc(f[3])}</td></tr>`).join('')+'</tbody>';
+  const res = runSQL(`SELECT * FROM ${name}`);
+  $('sampleTable').innerHTML = res.error ? '' : `<thead><tr>${res.columns.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`+
+    res.rows.map(r=>'<tr>'+r.map(v=>`<td class="${typeof v==='number'?'num':''}">${esc(v)}</td>`).join('')+'</tr>').join('')+'</tbody>';
+}
+
+/* ===== 題目 ===== */
+function loadQuery(q){
+  cur = q;
+  document.querySelectorAll('#qlist button').forEach(b=>b.classList.toggle('on',b.dataset.id===q.id));
+  $('qTitle').textContent = q.title;
+  $('qQuestion').textContent = q.question;
+  $('qConcept').textContent = '涵蓋概念：'+q.concept;
+  $('editor').value = q.sql;
+  $('qExpect').textContent = q.expect.replace('{n}', (runSQL(q.sql).rows||[]).length);
+  $('expectOut').innerHTML = tableHTML(runSQL(q.sql));
+  $('actualOut').innerHTML = '<p class="meta">尚未執行</p>';
+  $('cmpTitle').textContent = q.title;
+  $('customOut').innerHTML = '';
+  renderVariants();
+}
+function runEditor(){
+  $('actualOut').innerHTML = tableHTML(runSQL($('editor').value));
+}
+function renderVariants(){
+  const box = $('variants'); box.innerHTML='';
+  cur.variants.forEach((v,i)=>{
+    const d = document.createElement('div'); d.className='cmpitem';
+    const isErr = !!runSQL(v.sql).error;
+    if(isErr) d.classList.add('iserr');
+    d.innerHTML = `<b>${isErr?'<span class="errtag">⚠️ 錯誤示範</span>':''}修改 ${i+1}：${esc(v.label)}</b><pre class="sql">${esc(v.sql)}</pre>
+      <div class="row"><button class="btn" data-i="${i}">執行並與原始結果比較</button><button class="btn ghost" data-load="${i}">放進編輯區</button></div><div class="out"></div>
+      <div class="mine"><b>✍️ 我的說明：</b>${(MY_NOTES[cur.id]||[])[i] ? esc(MY_NOTES[cur.id][i]) : '<span class="meta">（尚未填寫）</span>'}</div>`;
+    box.appendChild(d);
+  });
+  box.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{
+    const v=cur.variants[+b.dataset.i], a=runSQL(cur.sql), r=runSQL(v.sql);
+    b.closest('.cmpitem').querySelector('.out').innerHTML =
+      `<p class="diff">${esc(summarize(a,r))}</p>${r.error?'<p class="meta">⚠️ 這是故意寫錯的示範：重點是看錯誤訊息，並說明錯在哪裡。</p>':''}
+       <div class="grid2"><div><h3>原始 SQL 結果</h3>${tableHTML(a,50)}</div><div><h3>修改後結果</h3>${tableHTML(r,50)}</div></div>
+       <div class="note"><b>為什麼會這樣？</b>\n${esc(((WHY_LONG[cur.id]||[])[+b.dataset.i])||v.why)}</div>`;
+  });
+  box.querySelectorAll('button[data-load]').forEach(b=>b.onclick=()=>{
+    $('editor').value = cur.variants[+b.dataset.load].sql;
+    location.hash='#query'; runEditor();
+  });
+}
+
+/* ===== 啟動 ===== */
+drawERD();
+initSqlJs({locateFile:f=>`https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${f}`}).then(SQL=>{
+  db = new SQL.Database();
+  db.run(SCHEMA_SQL);
+  let total=0;
+  Object.keys(DATA).forEach(t=>{
+    const n = DATA[t][0].length, ph = Array(n).fill('?').join(',');
+    const st = db.prepare(`INSERT INTO ${t} VALUES (${ph})`);
+    DATA[t].forEach(r=>st.run(r)); st.free(); total += DATA[t].length;
+  });
+  $('rowCount').textContent = `${total} 筆資料`;
+  $('status').textContent = '唯讀資料 · SQLite 已就緒';
+  const tabs=$('tableTabs');
+  Object.keys(META).forEach(t=>{ const b=document.createElement('button'); b.textContent=t; b.dataset.t=t; b.onclick=()=>showTable(t); tabs.appendChild(b); });
+  showTable('users');
+  const ql=$('qlist');
+  QUERIES.forEach(q=>{ const b=document.createElement('button'); b.dataset.id=q.id; b.innerHTML=`${q.id.toUpperCase()}<small>${q.short}</small>`; b.onclick=()=>loadQuery(q); ql.appendChild(b); });
+  loadQuery(QUERIES[0]);
+}).catch(e=>{ $('status').textContent='SQLite 載入失敗（請確認網路）'; console.error(e); });
+
+$('runBtn').onclick = runEditor;
+$('resetBtn').onclick = ()=>{ $('editor').value=cur.sql; $('actualOut').innerHTML='<p class="meta">尚未執行</p>'; };
+$('editor').addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); runEditor(); }});
+$('customCmp').onclick = ()=>{
+  const a=runSQL(cur.sql), r=runSQL($('editor').value);
+  $('customOut').innerHTML = `<p class="diff">${esc(summarize(a,r))}</p>
+    <div class="grid2"><div><h3>原始 SQL 結果</h3>${tableHTML(a,50)}</div><div><h3>編輯區 SQL 結果</h3>${tableHTML(r,50)}</div></div>
+    <p class="meta">請在作業中用自己的話寫下：你改了什麼？結果為什麼不同？</p>`;
+};
+</script>
+</body>
+</html>
